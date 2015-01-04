@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+{% load static %} <!-- New line -->
+
+<html>
+
+    <head>
+        <title>Mahalanobis Output</title>
+    </head>
+{% block image %}
+    <body>
+	<h1>The Mahalanobis Distance Method</h1>
+	<p> This section is purely to represent in a visual manner, the accuracy with which the Mahalanobis
+Distance Best Match algorithm that we have designed works. <br>
+The input is a Time Series with missing values that makes it irregular. Using the Mahalanobis Distance
+between the candidate and query, we find the combination with the smallest average Mahalanobis distance value to be the best match.
+<br>
+<br>
+<h3>The matched regions:</h3>
+        <img src="{% static "/static/IrregularTS/irregplot.png" %}" alt="Image" /> <!-- New line -->
+
+    </body>
+{% endblock %}
+
+
+<!--{% block image1 %}
+    <body>
+	
+
+        <img src="{% static "/static/CCBD/plotmulti.png" %}" alt="Image"/> <!-- New line
+	
+    </body>
+{% endblock %}
+-->
+</html>
+

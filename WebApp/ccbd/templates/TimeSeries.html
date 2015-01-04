@@ -1,0 +1,15 @@
+{% extends 'base1.html' %}
+ <title>About</title>
+
+{% block content1 %}
+	 
+ 	 <p>There has been a tremendous growth of interest in applications that deal with querying and mining of time series data. Time series data is widely used in various fields such as medicine, finance, speech recognition and science and thus development of an algorithm to mine such time series data is a necessity. There is increasing evidence that the classic Dynamic Time Warping(DTW) measure is the best measure in most domains. In time series analysis, DTW is an algorithm for measuring similarity between two temporal sequences which may vary in time or speed. Indeed, any data which can be turned into a linear sequence can be analyzed with DTW. In general, DTW is a method that calculates an optimal match between two given sequences (e.g. time series) with certain restrictions.  This is done by aligning the two sequences and the creating a ‘warping matrix’ for the candidate and query time series to obtain a warping path between the two.</p>
+
+<h2>UCR Suite</h2>
+<p></p>
+<p>In order to find the best match between the candidate and the query the UCR suite[3] suggests the following steps. The query of size m is read from a query file and is Z-normalized. The candidates are read from the data file. A chunk of m points are considered from the candidate. The LBKim, LBKeogh and DTW distance calculation is performed on the two time series. 
+The LBKim and LBKeogh are lower bounding measures, used to prune off unpromising candidates by comparing with the best-so-far. The best-so-far is a measure which holds the best computed DTW distance at any point of time. If the lower bound exceed the best-so-far, then the candidate is pruned off.  If the candidate is not pruned off by the lower bound calculation then DTW distance calculation is done between the two time series. If the distance at any point of time exceed the best-so-far the remaining calculation is abandoned and the candidate is pruned off. Otherwise the best-so-far is updated. 
+</p>
+
+
+{% endblock %}

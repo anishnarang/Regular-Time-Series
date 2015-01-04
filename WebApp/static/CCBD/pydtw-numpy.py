@@ -1,0 +1,399 @@
+
+import sys
+import math
+import time
+import numpy
+
+
+
+
+def sqr(x):
+    """
+
+    @param x:
+    @return:
+    """
+    return x * x
+
+
+def minima(a,b):
+    return a if a <b else b
+
+def maxima(a,b):
+    return a if a  > b else b
+
+    
+def dist(x, y):
+    return (x - y) * (x - y)
+
+
+class deque():
+    def __init__(self, capacity):
+        self.dq = numpy.empty((capacity,), dtype=numpy.int)
+        self.size = 0
+        self.capacity = capacity
+        self.f = 0
+        self.r = self.capacity -1
+
+    def push_back(self, v):
+        self.dq[self.r] = v
+        self.r -= 1
+        if self.r < 0:
+            self.r = self.capacity - 1
+        self.size += 1
+
+    def pop_front(self):
+        self.f -= 1
+        if self.f < 0:
+            self.f = self.capacity - 1
+        self.size -= 1
+
+    def pop_back(self):
+        self.r = (self.r + 1) % self.capacity
+        self.size -= 1
+
+    def front(self):
+        aux = self.f - 1
+        if aux < 0:
+            aux = self.capacity - 1
+        return self.dq[aux]
+
+    def back(self):
+        aux = (self.r + 1) % self.capacity
+        return self.dq[aux]
+
+    def empty(self):
+        return self.size == 0
+
+# Finding the envelop of minima and maxima value for LB_Keogh
+# Implementation idea is intoruduced by Danial Lemire in his paper
+# "Faster Retrieval with a Two-Pass Dynamic-Time-Warping Lower Bound", Pattern Recognition 42(9), 2009.
+def lower_upper_lemire(t, m, r):
+    du = deque(2 * r + 2)
+    dl = deque(2 * r + 2)
+    u = numpy.empty(m)
+    l = numpy.empty(m)
+    du.push_back(0)
+    dl.push_back(0)
+
+    for i in range(m):
+        if i > r:
+            u[i - r - 1] = t[du.front()]
+            l[i - r - 1] = t[dl.front()]
+        if t[i] > t[i - 1]:
+            du.pop_back()
+            while not du.empty() and t[i] > t[du.back()]:
+                du.pop_back()
+        else:
+            dl.pop_back()
+            while not dl.empty() and t[i] < t[dl.back()]:
+                dl.pop_back()
+        du.push_back(i)
+        dl.push_back(i)
+
+        if i == 2 * r + 1 + du.front():
+            du.pop_front()
+        elif i == 2 * r + 1 + dl.front():
+            dl.pop_front()
+
+    for i in range(m, m + r + 1):
+        u[i - r - 1] = t[du.front()]
+        l[i - r - 1] = t[dl.front()]
+        if i - du.front() > 2 * r + 1:
+            du.pop_front()
+        if i - dl.front() > 2 * r + 1:
+            dl.pop_front()
+
+    return l, u
+
+#   In simple wors what this does is computes the distance between the first two point
+#       if its greater than bsf we can prune the whole series
+#   Similarly the process is repeated for two points and then 3 points
+#   This will save lots of Computation that is done .
+def lb_kim_hierarchy(t, q, j, m, mean, std, bsf):
+    d =0.0
+    # print t[j]
+    # print mean
+    # print std
+    x0 = (t[j] - mean) / std
+    # print x0
+    y0 = (t[(m - 1 + j)] - mean) / std
+    # print y0
+    lb = dist(x0, q[0]) + dist(y0, q[m - 1])
+    # print lb
+    if lb >= bsf: return lb
+
+    x1 = (t[(j + 1)] - mean) / std
+    d = minima(dist(x1, q[0]), dist(x0, q[1]))
+    d = minima(d, dist(x1, q[1]))
+    lb += d
+    # print lb
+    if lb >= bsf: return lb
+
+    y1 = (t[(m - 2 + j)] - mean) / std
+    d = minima(dist(y1, q[m - 1]), dist(y0, q[m - 2]))
+    d = minima(d, dist(y1, q[m - 2]))
+    lb += d
+    # print lb
+    if lb >= bsf: return lb
+
+    x2 = (t[(j + 2)] - mean) / std
+    d = minima(dist(x0, q[2]), dist(x1, q[2]))
+    d = minima(d, dist(x2, q[2]))
+    d = minima(d, dist(x2, q[1]))
+    d = minima(d, dist(x2, q[0]))
+    lb += d
+    # print lb
+    if lb >= bsf: return lb
+
+    y2 = (t[(m - 3 + j)] - mean) / std
+    d = minima(dist(y0, q[m - 3]), dist(y1, q[m - 3]))
+    d = minima(d, dist(y2, q[m - 3]))
+    d = minima(d, dist(y2, q[m - 2]))
+    d = minima(d, dist(y2, q[m - 1]))
+    lb += d
+    # print lb
+    return lb
+
+
+def lb_keogh_cumulative(order, t, uo, lo, j, m, mean, std, best_so_far):
+    lb = 0
+    cb = numpy.empty(m)
+    for i in range(m):
+        if lb < best_so_far:
+            x = (t[(order[i] + j)] - mean) / std
+            d = 0
+            if x > uo[i]:
+                d = dist(x, uo[i])
+            elif x < lo[i]:
+                d = dist(x, lo[i])
+            lb += d
+            cb[order[i]] = d
+        else:
+            break
+    return lb, cb
+
+
+def lb_keogh_data_cumulative(order, tz, qo, l, u, m, mean, std, best_so_far):
+    lb = 0
+    cb = numpy.empty(m)
+    for i in range(m):
+        if lb < best_so_far:
+            uu = (u[order[i]] - mean) / std
+            ll = (l[order[i]] - mean) / std
+            d = 0
+            if qo[i] > uu:
+                d = dist(qo[i], uu)
+            elif qo[i] < ll:
+                d = dist(qo[i], ll)
+
+            lb += d
+            cb[order[i]] = d
+        else:
+            break
+    return  lb,cb
+
+
+def dtw(A, B, cb, m, r, bsf):
+    cost = numpy.empty(2 * r + 1)
+    for i in range(len(cost)):
+        cost[i] = 1e20
+
+    cost_prev = numpy.empty(2 * r + 1)
+    for i in range(len(cost_prev)):
+        cost_prev[i] = 1e20
+    k = 0
+    for i in range(m):
+        k = maxima(0, r - i)
+        min_cost = 1e20
+        # print ( str(i) + "  " + "   " +str(k))
+        for j in range(maxima(0, i - r), minima(m - 1, i + r)+1):
+
+            if (i == 0) and (j == 0):
+                cost[k] = dist(A[0], B[0])
+                min_cost = cost[k]
+                k += 1
+                continue
+            if (j - 1 < 0) or (k - 1 < 0):
+                y = 1e20
+            else:
+                y = cost[k - 1]
+            if (i - 1 < 0) or (k + 1 > 2 * r):
+                x = 1e20
+            else:
+                x = cost_prev[k + 1]
+            if (i - 1 < 0) or (j - 1 < 0):
+                z = 1e20
+            else:
+                z = cost_prev[k]
+
+            # /// Classic DTW calculation
+            cost[k] = minima(minima(x, y), z) + dist(A[i], B[j])
+            # print ( str(i) + "  " + str(j) + "   " +str(k))
+            # print cost[k]
+            # /// Find minimum cost in row for early abandoning (possibly to use column instead of row).
+            if cost[k] < min_cost:
+                min_cost = cost[k]
+            # print j
+            # print min_cost
+            k += 1
+        if (i + r < m - 1) and ((min_cost + cb[i + r + 1]) >= bsf):
+            return min_cost + cb[i + r + 1]
+
+        # /// Move current array to previous array.
+        cost_tmp = cost
+        cost = cost_prev
+        cost_prev = cost_tmp
+
+    k -= 1
+    final_dtw = cost_prev[k]
+    return final_dtw
+
+
+def main():
+    start_time = time.time()
+    # num_args = len(sys.argv)    #to get the number of command line arguments
+    # if (num_args < 4):
+    #     sys.exit()   #exit if the number of arguments are not more than equal to 3
+
+    # qp = open(sys.argv[2], "r")
+    # fp = open(sys.argv[1], "r")
+    qp = open("Query.txt", "r")
+    fp = open("Data.txt", "r")
+    if (qp):
+        for line in qp:
+            q = line.split()
+    else:
+        print "query file doesnt exist"
+    bsf = 1e20        #best so far , infinity for starting
+    print bsf
+    # r = int(sys.argv[2])
+    r = int(128 *0.05)
+    m = len(q)
+    print m
+    ex = ex1 = 0
+    q = map(float, q)
+    loc = 0
+    ex = sum(q)
+    ex1 = sum(map(sqr, q))
+    mean = ex / m
+    std = ex1 / m
+    std = math.sqrt(std - mean * mean)
+    q = [(X - mean) / std for X in q]
+    q = numpy.array(q)
+    #Create Envelop of the query:lower envelop , l and upper envelop u, r is the wrapping windows
+    l, u = lower_upper_lemire(q, m, r)
+
+    Q_tmp = [(q[i], i) for i in range(m)]
+    Q_tmp = sorted(Q_tmp, key=lambda pos: pos[0])
+    order = numpy.empty(m)      #this is the list that holds the sorted order of indexes
+
+    qo = numpy.empty(m)
+    uo = numpy.empty(m)
+    lo = numpy.empty(m)
+
+    for i in range(m):
+        o = Q_tmp[i][1]
+        order[i] = o
+        qo[i] = q[o]
+        uo[i] = u[o]
+        lo[i] = l[o]
+
+    cb = numpy.empty(m)
+    cb1 = numpy.empty(m)
+    cb2 = numpy.empty(m)
+
+    for i in range(m):
+        cb[i] = 0
+        cb1[i] = 0
+        cb2[i] = 0
+
+    d = 0 #this is the distance
+    i = 0
+    j = 0
+    ex = ex2 = 0
+    if (fp):
+        for line in fp:
+            dataArr = [float(w) for w in line.split()]
+    else:
+        print "data file doesnt exist"
+        #dataArr = map(float,dataArr)
+
+    dataSize =  len(dataArr)
+    dataArr = numpy.array(dataArr)
+
+
+    l_buff, u_buff = lower_upper_lemire(dataArr, len(dataArr), r)
+    i =0
+    t = numpy.empty(2 * m)
+    tz = numpy.empty(m)
+    kim = 0
+    keogh1 = 0
+    keogh2 = 0
+
+    print(str(time.time() - start_time) +"seconds. Now heading to DTW computation")
+
+    for i in range(dataSize):
+        ex += dataArr[i]
+        ex2 += dataArr[i] * dataArr[i]
+        t[i % m] = dataArr[i]
+        t[(i % m) + m] = dataArr[i]
+        if i >= m - 1:
+            #     /// the current starting location of T
+            #     /// Z_norm(T[i]) will be calculated on the fly
+            mean = ex / m
+            std = ex2 / m
+            std = math.sqrt(std - mean*mean)
+            j = (i + 1) % m
+            I = i - (m - 1)
+            lb_kim = lb_kim_hierarchy(t, q, j, m, mean, std, bsf)
+            if(i%10000==0) :print("LB Kim is " + str(kim) + " " + str(keogh1) + " " + str(keogh2) + " " + str(bsf))
+            # time.sleep(5)
+            # print t
+            # print q
+            # print("LB Kim is" + str(lb_kim))
+            if lb_kim < bsf:
+                lb_k, cb1 = lb_keogh_cumulative(order, t, uo, lo, j, m, mean, std, bsf)
+
+                # print cb1
+
+                if (lb_k < bsf):
+                    for k in range(m):
+                        tz[k] = (t[(k + j)] - mean) / std
+                    lb_k2, cb2= lb_keogh_data_cumulative(order, tz, qo, l_buff[I:], u_buff[I:], m, mean, std, bsf)
+
+                    # print cb2
+                    if lb_k2 < bsf:
+                        if (lb_k > lb_k2):
+                            cb[m - 1] = cb1[m - 1]
+                            for k in reversed(range(0, m - 1)):
+                                cb[k] = cb[k+1]+cb1[k]
+                        else:
+                            cb[m - 1] = cb2[m - 1]
+                            for k in reversed(range(0, m - 1)):
+                                cb[k] = cb[k+1]+cb2[k]
+                        d = dtw(tz, q, cb, m, r, bsf)
+                        # print cb
+                        # print d
+                        # print "DTW distance is",d
+                        if  d < bsf:
+                            bsf = d
+                            loc = i - m + 1
+                    else:
+                        keogh2 +=1
+                else:
+                    keogh1 +=1
+            else:
+                kim +=1
+            ex -= t[j]
+            ex2 -= t[j]*t[j]
+    print "location: ", loc
+    print "dist : ", math.sqrt(bsf)
+    print "data scanned: ", i
+
+#----------------------------------------------------------------------------
+
+start_time = time.time()
+main()
+print time.time() - start_time, "seconds"
+

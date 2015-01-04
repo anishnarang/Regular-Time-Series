@@ -1,0 +1,40 @@
+
+<!DOCTYPE html>
+{% load static %} <!-- New line -->
+
+<html>
+
+    <head>
+        <title>Output</title>
+    </head>
+{% block image %}
+    <body>
+        <h1>UCR Suite :</h1>
+	<h3>The time taken for UCR Suite is : {{time}} minutes</h3>
+	<p>Best distance: {{distance}}</p>
+	<p>Location : {{location}}</p>
+	<h1>Parallelised implementation : </h1>
+        <h3>The time taken is for parallelised Threadpool implementation is : {{timemulti}} minutes</h3>
+	<p>Best distance: {{distancemulti}}</p>
+	<p>Location : {{locationmulti}}</p>
+        <img src="{% static "/static/CCBD/plot.png" %}" alt="Image" /> <!-- New line -->
+	<h1> Significance of the Outputs: </h1>
+	<p>The idea behind presenting the results in the form of this webapp is to showcase the impact of the optimization of the UCR DTW suite by parallelizing the implementation across cores. The expected speed up is roughly by a factor of number of cores of the machine taking into account the following considerations:</p>
+	<ul>
+		<li>Parallel execution over a number of cores</li>
+		<li>Reduced context switches</li>
+	</ul>
+    </body>
+{% endblock %}
+
+
+<!--{% block image1 %}
+    <body>
+	
+
+        <img src="{% static "/static/CCBD/plotmulti.png" %}" alt="Image"/> <!-- New line
+	
+    </body>
+{% endblock %}
+-->
+</html>

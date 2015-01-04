@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+{% load static %} <!-- New line -->
+
+<html>
+
+    <head>
+        <title>Output</title>
+    </head>
+{% block image %}
+    <body>
+	
+        <h1>UCR Suite :</h1>
+	<h3>The time taken for UCR Suite is : {{time}} milli seconds</h3>
+        <img src="{% static "/static/plot.png" %}" alt="Image" /> <!-- New line -->
+	
+    </body>
+{% endblock %}
+
+
+{% block image1 %}
+    <body>
+	
+        <h1>Parallelised implementation : </h1>
+        <h3>The time taken is for parallelised Threadpool implementation is : {{timemulti}} milli seconds</h3>
+        <img src="{% static "/static/plotmulti.png" %}" alt="Image"/> <!-- New line -->
+	
+    </body>
+{% endblock %}
+
+</html>

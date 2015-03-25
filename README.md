@@ -1,3 +1,0 @@
-# Regular-Time-Series
-
-Webapp
